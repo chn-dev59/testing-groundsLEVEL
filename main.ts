@@ -159,8 +159,10 @@ controller.B.onEvent(ControllerButtonEvent.Released, function () {
 game.onUpdate(function () {
     let standing = false
     for (let p of sprites.allOfKind(SpriteKind.Food)) {
-        if (player.overlapsWith(p) && player.vy > 0 && player.y < p.y) {
-            player.bottom = p.top
+        // FIXED JITTER: Added >= 0 to vy, and + 1 to p.top to submerge the frog by 1 pixel.
+        // This ensures the physics engine registers them as consistently overlapping instead of bouncing!
+        if (player.overlapsWith(p) && player.vy >= 0 && player.y < p.y) {
+            player.bottom = p.top + 1
             player.vy = 0
             standing = true
         }
