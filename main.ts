@@ -3,7 +3,7 @@ const GRAVITY = 500
 const MAX_CHARGE = 300
 const CHARGE_RATE = 20
 const MOVE_SPEED = 60
-const TONGUE_RANGE = 112 // 7 blocks distance from the working code
+const TONGUE_RANGE = 112
 
 let lives = 3
 let isCharging = false
@@ -13,48 +13,56 @@ let tongueTarget: Sprite = null
 let tongueCount = 1
 let currentStage = 0
 
-// --- 2. DATA STRUCTURES (UNTOUCHED) ---
+// --- 2. DATA STRUCTURES ---
 interface Platform { x: number; y: number; w: number; h: number; platType: string }
 interface Node { x: number; y: number; kind: string }
 interface LevelData { spawnX: number; spawnY: number; platforms: Platform[]; nodes: Node[] }
 
-// --- 3. WORKSHEET LEVELS (UNTOUCHED) ---
+// --- 3. LEVELS (RECALIBRATED) ---
 const levels: LevelData[] = [
-    {   // Stage 1: Ki
-        spawnX: 20, spawnY: 50,
+    {   // Stage 1: The Tutorial
+        spawnX: 20, spawnY: 100,
         platforms: [
-            { x: 0, y: 100, w: 70, h: 20, platType: "normal" },
-            { x: 100, y: 60, w: 30, h: 60, platType: "normal" },
-            { x: 170, y: 60, w: 30, h: 60, platType: "normal" },
-            { x: 230, y: 100, w: 100, h: 20, platType: "normal" }
+            // MOUNTAIN 1: Shorter (y increased to 130 to lower the top)
+            { x: 0, y: 130, w: 50, h: 10, platType: "normal" },
+            // THE PIT FLOOR
+            { x: 50, y: 170, w: 110, h: 10, platType: "normal" },
+            // MOUNTAIN 2: High Wall (Impossible 140px climb)
+            { x: 160, y: 30, w: 20, h: 150, platType: "normal" },
+            // GOAL LEDGE
+            { x: 180, y: 30, w: 80, h: 10, platType: "normal" }
         ],
-        nodes: [{ x: 115, y: 20, kind: "bug" }, { x: 185, y: 20, kind: "bug" }]
+        // BUG: Positioned high and right to assist the climb out of the pit
+        nodes: [{ x: 160, y: 30, kind: "bug" }]
     },
-    {   // Stage 2: Sho
+    {   // Stage 2: Foothills
         spawnX: 20, spawnY: 80,
         platforms: [
             { x: 0, y: 110, w: 50, h: 10, platType: "normal" },
-            { x: 80, y: 90, w: 40, h: 10, platType: "normal" },
-            { x: 150, y: 70, w: 40, h: 10, platType: "normal" },
-            { x: 220, y: 50, w: 60, h: 10, platType: "normal" }
+            { x: 80, y: 50, w: 20, h: 70, platType: "normal" },
+            { x: 130, y: 70, w: 20, h: 50, platType: "normal" },
+            { x: 180, y: 90, w: 20, h: 30, platType: "normal" },
+            { x: 230, y: 100, w: 80, h: 20, platType: "normal" }
         ],
-        nodes: [{ x: 100, y: 40, kind: "bug" }]
+        nodes: [{ x: 110, y: 30, kind: "bug" }, { x: 160, y: 40, kind: "bug" }]
     },
-    {   // Stage 3: Ten
+    {   // Stage 3: High Peaks
         spawnX: 20, spawnY: 50,
         platforms: [
-            { x: 0, y: 90, w: 80, h: 10, platType: "normal" },
-            { x: 250, y: 90, w: 80, h: 10, platType: "normal" }
+            { x: 0, y: 120, w: 50, h: 10, platType: "normal" },
+            { x: 130, y: 90, w: 10, h: 10, platType: "normal" },
+            { x: 250, y: 120, w: 50, h: 10, platType: "normal" }
         ],
-        nodes: [{ x: 160, y: 40, kind: "bee" }]
+        nodes: [{ x: 80, y: 60, kind: "bug" }, { x: 160, y: 40, kind: "bee" }, { x: 220, y: 60, kind: "bug" }]
     },
-    {   // Stage 4: Ketsu
+    {   // Stage 4: The Summit
         spawnX: 20, spawnY: 80,
         platforms: [
-            { x: 0, y: 110, w: 100, h: 10, platType: "normal" },
-            { x: 150, y: 80, w: 60, h: 10, platType: "goal" }
+            { x: 0, y: 130, w: 80, h: 10, platType: "normal" },
+            { x: 110, y: 90, w: 40, h: 10, platType: "normal" },
+            { x: 180, y: 60, w: 50, h: 10, platType: "goal" }
         ],
-        nodes: [{ x: 180, y: 50, kind: "star" }]
+        nodes: [{ x: 140, y: 40, kind: "bug" }, { x: 205, y: 40, kind: "star" }]
     }
 ]
 
@@ -99,14 +107,12 @@ player.ay = GRAVITY
 scene.cameraFollowSprite(player)
 scene.setBackgroundColor(9)
 
-// --- 5. HELPER: DISTANCE ---
 function getDistance(s1: Sprite, s2: Sprite): number {
     let dx = s1.x - s2.x;
     let dy = s1.y - s2.y;
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-// --- 6. THE BUILDER FUNCTION (MAINTAINS WORKSHEET) ---
 function loadStage(index: number) {
     for (let s of sprites.allOfKind(SpriteKind.Food)) s.destroy()
     for (let b of sprites.allOfKind(SpriteKind.Enemy)) b.destroy()
@@ -125,15 +131,14 @@ function loadStage(index: number) {
     for (let n of data.nodes) {
         let node = sprites.create(n.kind == "star" ? starImg : flyImg, SpriteKind.Enemy)
         node.setPosition(n.x, n.y)
-        // Apply working fly movement
         if (n.kind != "star") {
-            node.vx = 40
+            node.vx = 20
             node.setBounceOnWall(true)
         }
     }
 }
 
-// --- 7. GRAPPLE ACTION (FROM WORKING CODE) ---
+// --- 5. INPUTS ---
 controller.B.onEvent(ControllerButtonEvent.Pressed, function () {
     if (tongueCount > 0) {
         let targets = sprites.allOfKind(SpriteKind.Enemy)
@@ -155,23 +160,37 @@ controller.B.onEvent(ControllerButtonEvent.Released, function () {
     player.ay = GRAVITY
 })
 
-// --- 8. CORE LOGIC ---
+// --- 6. GAME LOOP ---
 game.onUpdate(function () {
     let standing = false
     for (let p of sprites.allOfKind(SpriteKind.Food)) {
-        // FIXED JITTER: Added >= 0 to vy, and + 1 to p.top to submerge the frog by 1 pixel.
-        // This ensures the physics engine registers them as consistently overlapping instead of bouncing!
-        if (player.overlapsWith(p) && player.vy >= 0 && player.y < p.y) {
-            player.bottom = p.top + 1
-            player.vy = 0
-            standing = true
+        if (player.overlapsWith(p)) {
+            let overlapLeft = player.right - p.left;
+            let overlapRight = p.right - player.left;
+            let overlapTop = player.bottom - p.top;
+            let overlapBottom = p.bottom - player.top;
+            let minOverlap = Math.min(Math.min(overlapLeft, overlapRight), Math.min(overlapTop, overlapBottom));
+
+            if (minOverlap == overlapTop && player.vy >= 0) {
+                player.bottom = p.top + 1;
+                player.vy = 0;
+                standing = true;
+            } else if (minOverlap == overlapBottom && player.vy < 0) {
+                player.top = p.bottom;
+                player.vy = 0;
+            } else if (minOverlap == overlapLeft) {
+                player.right = p.left;
+                player.vx = 0;
+            } else if (minOverlap == overlapRight) {
+                player.left = p.right;
+                player.vx = 0;
+            }
         }
     }
 
     if (standing && !isGrappling) {
         tongueCount = 1
         player.vx = 0
-        // Working Jump Calculation
         if (controller.A.isPressed()) {
             isCharging = true
             player.setImage(frogCharging)
@@ -189,24 +208,18 @@ game.onUpdate(function () {
 
     if (isGrappling && tongueTarget) {
         player.ay = 0
-        player.vx = (player.x < tongueTarget.x) ? 120 : -120
-        player.vy = (player.y < tongueTarget.y) ? 120 : -120
-
-        if (getDistance(player, tongueTarget) > TONGUE_RANGE + 20) {
-            isGrappling = false
-            tongueTarget = null
-            player.ay = GRAVITY
-        }
+        player.vx = (player.x < tongueTarget.x) ? 140 : -140
+        player.vy = (player.y < tongueTarget.y) ? 140 : -140
     }
 
-    if (player.y > 150) {
+    if (player.y > 220) {
         lives -= 1
         if (lives <= 0) game.over(false)
         loadStage(currentStage)
     }
 })
 
-// --- 9. UI & GOALS ---
+// --- 7. UI & OVERLAPS ---
 game.onPaint(function () {
     if (isGrappling && tongueTarget) {
         screen.drawLine(player.x - scene.cameraLeft(), player.y - scene.cameraTop(),
